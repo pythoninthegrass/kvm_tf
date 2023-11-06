@@ -71,10 +71,11 @@ download_file() {
 
 unzip_file() {
 	# verify plugin doesn't exist
-	local filename=$(find $2 -name "terraform-provider-libvirt*" \
-		! -name "*.zip" \
+	local filename=$(find $2 \
+		-maxdepth 1 \
 		-type f \
-		-maxdepth 1)
+        -name "terraform-provider-libvirt*" \
+		! -name "*.zip")
 	if [[ -f "$filename" ]] || [[ -n "$filename" ]]; then
 		echo "Plugin terraform-provider-libvirt already exists. Skipping unzip..."
 		return
@@ -85,9 +86,10 @@ unzip_file() {
 }
 
 cleanup() {
-	local filename=$(find "${logged_in_home}/.terraform.d/plugins" -name $1 \
+	local filename=$(find "${logged_in_home}/.terraform.d/plugins" \
+		-maxdepth 1 \
 		-type f \
-		-maxdepth 1)
+        -name $1)
 	[[ -f "$filename" ]] && rm -rf "$filename"
 }
 
