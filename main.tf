@@ -1,11 +1,18 @@
 provider "libvirt" {
-  uri = "qemu+ssh://deploys@ams-kvm-remote-host/system"
+  uri = "qemu:///system"
+}
+
+resource "random_id" "rng" {
+  keepers = {
+    first = "${timestamp()}"
+  }
+  byte_length = 8
 }
 
 resource "libvirt_pool" "ubuntu" {
   name = "ubuntu"
   type = "dir"
-  path = var.libvirt_disk_path
+  path = "${var.libvirt_disk_path}-${random_id.rng.hex}"
 }
 
 resource "libvirt_volume" "ubuntu-qcow2" {
@@ -71,24 +78,18 @@ resource "libvirt_domain" "domain-ubuntu" {
     ]
 
     connection {
-      type                = "ssh"
-      user                = var.ssh_username
-      host                = libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]
-      private_key         = file(var.ssh_private_key)
-      bastion_host        = "ams-kvm-remote-host"
-      bastion_user        = "deploys"
-      bastion_private_key = file("~/.ssh/deploys.pem")
-      timeout             = "2m"
+      type        = "ssh"
+      user        = var.ssh_username
+      host        = libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]
+      private_key = file(var.ssh_private_key)
+      timeout     = "2m"
     }
   }
 
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "[nginx]" > nginx.ini
-      echo "${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}" >> nginx.ini
-      echo "[nginx:vars]" >> nginx.ini
-      echo "ansible_ssh_common_args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o ProxyCommand=\"ssh -W %h:%p -q ams-kvm-remote-host\"'" >> nginx.ini
-      ansible-playbook -u ${var.ssh_username} --private-key ${var.ssh_private_key} -i nginx.ini ansible/playbook.yml
-      EOT
-  }
+# TODO: fix provisioner (holds up terraform apply)
+#   provisioner "local-exec" {
+#     command = <<EOT
+#         ansible-playbook -i ${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}, -u ${var.ssh_username} --private-key ${var.ssh_private_key} ${path.module}/config/playbook.yml
+#       EOT
+#   }
 }

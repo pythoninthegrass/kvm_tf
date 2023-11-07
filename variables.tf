@@ -1,6 +1,6 @@
 variable "libvirt_disk_path" {
   description = "path for libvirt pool"
-  default     = "/opt/kvm/pool1"
+  default     = "/opt/kvm/pool"
 }
 
 variable "ubuntu_24_img_url" {
