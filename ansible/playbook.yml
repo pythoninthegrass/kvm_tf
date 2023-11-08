@@ -7,7 +7,7 @@
   gather_facts: no
 
   tasks:
-    - name: add hosts from extra-vars to "temp" group
+    - name: Add hosts from extra-vars to "temp" group
       add_host:
         groups: temp
         name: "{{ item }}"
@@ -33,7 +33,7 @@
         enabled: yes
         masked: no
 
-    - name: ensure nginx is started
+    - name: Ensure nginx is started
       systemd:
         state: started
         name: nginx
