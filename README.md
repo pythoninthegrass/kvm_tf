@@ -64,7 +64,6 @@ go test -v -timeout 5m
 ## TODO
 * [Issues](https://github.com/pythoninthegrass/kvm_tf/issues)
 * Tweak cloud-init
-* Run terraform against remote linux box
 
 ## Further Reading
 [Virtualization – Getting Started :: Fedora Docs](https://docs.fedoraproject.org/en-US/quick-docs/virtualization-getting-started/)

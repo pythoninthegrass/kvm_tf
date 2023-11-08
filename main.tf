@@ -1,5 +1,9 @@
 provider "libvirt" {
-  uri = "qemu:///system"
+  # localhost
+  # uri = "qemu:///system"
+
+  # ssh
+  uri = "qemu+ssh://${local.server_user}@${local.server_host}/system"
 }
 
 resource "random_id" "rng" {
