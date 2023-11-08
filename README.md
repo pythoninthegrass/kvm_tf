@@ -32,6 +32,9 @@ Terraform/Cloud-Init/Ansible boilerplate for libvirt (KVM) Terraform provider
 # install libvirt provider
 ./bootstrap
 
+# activate virtual environment if ansible is installed via venv
+source .venv/bin/activate   # aka `poetry shell`
+
 # deploy
 terraform init
 terraform plan -out tfplan
