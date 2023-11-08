@@ -51,11 +51,20 @@ curl -I "$vm_ip"
 terraform destroy
 ```
 
+## Development
+### Testing
+```bash
+cd test/
+go mod init github.com/pythoninthegrass/kvm_tf
+go mod tidy
+go get github.com/gruntwork-io/terratest/modules/terraform
+go test -v -timeout 5m
+```
+
 ## TODO
 * [Issues](https://github.com/pythoninthegrass/kvm_tf/issues)
 * Tweak cloud-init
 * Run terraform against remote linux box
-* QA test
 
 ## Further Reading
 [Virtualization – Getting Started :: Fedora Docs](https://docs.fedoraproject.org/en-US/quick-docs/virtualization-getting-started/)
