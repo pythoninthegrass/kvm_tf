@@ -86,10 +86,12 @@ resource "libvirt_domain" "domain-ubuntu" {
     }
   }
 
-# TODO: fix provisioner (holds up terraform apply)
-#   provisioner "local-exec" {
-#     command = <<EOT
-#         ansible-playbook -i ${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}, -u ${var.ssh_username} --private-key ${var.ssh_private_key} ${path.module}/config/playbook.yml
-#       EOT
-#   }
+  provisioner "local-exec" {
+    command = <<EOT
+        ansible-playbook ${path.module}/ansible/playbook.yml \
+            --extra-vars 'target_host=["${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}"]' \
+            -u ${var.ssh_username} \
+            --private-key ${var.ssh_private_key}
+      EOT
+  }
 }
