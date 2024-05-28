@@ -1,15 +1,23 @@
 #cloud-config
 
-output: {all: '| tee -a /var/log/cloud-init.log'}   # store logs inside vm
+output: {all: "| tee -a /var/log/cloud-init.log"} # store logs inside vm
 
 timezone: "America/Chicago"
 
 hostname: ubuntu
 
-package_update: true      # default: true
-package_upgrade: false    # default: false  # TODO: set to true
+package_update: true # default: true
+package_upgrade: false # default: false
 # https://github.com/number5/cloud-init/blob/main/doc/examples/cloud-config-apt.txt#L21
-apt_get_command: ["apt-get", "--option=Dpkg::Options::=--force-confold", "--option=Dpkg::options::=--force-unsafe-io", "--assume-yes", "--quiet", "--no-install-recommends"]
+apt_get_command:
+  [
+    "apt-get",
+    "--option=Dpkg::Options::=--force-confold",
+    "--option=Dpkg::options::=--force-unsafe-io",
+    "--assume-yes",
+    "--quiet",
+    "--no-install-recommends",
+  ]
 
 apt:
   sources:
