@@ -1,21 +1,7 @@
 # code: language=ansible
 
 ---
-# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html
-# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/systemd_module.html#examples
-
-- hosts: localhost
-  connection: local
-  gather_facts: no
-
-  tasks:
-    - name: Add hosts from extra-vars to "temp" group
-      add_host:
-        groups: temp
-        name: "{{ item }}"
-      loop: "{{ target_host }}"
-
-- hosts: temp
+- hosts: all
   gather_facts: true
   remote_user: ubuntu
   become: yes
