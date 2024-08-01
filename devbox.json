@@ -19,7 +19,9 @@
   "shell": {
     "init_hook": [
       ". $VENV_DIR/bin/activate",
-      "uv pip install -r requirements.txt"
+      "uv pip install -r requirements.txt",
+      "source ./bin/ansible_functions.sh",
+      "export ANSIBLE_BECOME_PASS=$(askpass --sudo)"
     ],
     "scripts": {
       "install": "task install",

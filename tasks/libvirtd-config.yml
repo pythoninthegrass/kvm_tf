@@ -1,0 +1,88 @@
+# code: language=ansible
+
+---
+- hosts: all
+  become: true
+  gather_facts: true
+  any_errors_fatal: true
+  vars:
+    libvirt_user: "{{ ansible_user }}"
+    libvirt_group: "libvirt"
+  tasks:
+    - name: Install packages (Debian)
+      ansible.builtin.apt:
+        pkg:
+          - bridge-utils
+          - libvirt-clients
+          - libvirt-daemon-system
+          - qemu-kvm
+          - virt-manager
+          - virtinst
+        state: present
+        update_cache: true
+        cache_valid_time: 1800
+      when: ansible_os_family == 'Debian'
+
+    # TODO: test on redhat os
+    - name: Install packages (Red Hat)
+      ansible.builtin.dnf:
+        name:
+          - bridge-utils
+          - libvirt-client
+          - libvirt-daemon
+          - qemu-kvm
+          - virt-manager
+          - virt-install
+        state: present
+      when: ansible_os_family == 'RedHat'
+      tags: qa
+
+    - name: Increase network buffer sizes
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        - { name: 'net.core.rmem_max', value: '16777216' }
+        - { name: 'net.core.wmem_max', value: '16777216' }
+
+    - name: Increase open file descriptor limits
+      community.general.pam_limits:
+        domain: '*'
+        limit_type: "{{ item.limit_type }}"
+        limit_item: nofile
+        value: 65536
+      loop:
+        - { limit_type: 'soft' }
+        - { limit_type: 'hard' }
+
+    - name: Add user to libvirt group
+      ansible.builtin.user:
+        name: "{{ libvirt_user }}"
+        groups: "{{ item }}"
+        append: yes
+      loop:
+        - kvm
+        - libvirt
+      tags: qa
+
+    - name: Set user and group in qemu.conf
+      ansible.builtin.lineinfile:
+        path: /etc/libvirt/qemu.conf
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        insertafter: '^#\s*user\s*=.*"100"'
+      loop:
+        - { regexp: '^user\s*=.*', line: 'user = "{{ libvirt_user }}"' }
+        - { regexp: '^group\s*=.*', line: 'group = "{{ libvirt_group }}"' }
+
+    - name: Restart networking service
+      ansible.builtin.systemd:
+        name: networking
+        state: restarted
+
+    - name: Restart libvirtd service
+      ansible.builtin.systemd:
+        name: libvirtd
+        state: restarted

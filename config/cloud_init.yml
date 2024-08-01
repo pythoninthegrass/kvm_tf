@@ -39,7 +39,7 @@ disable_root: false
 
 chpasswd:
   list: |
-     root:password
+     root:toor
   expire: false
 
 users:

@@ -99,7 +99,7 @@ resource "libvirt_domain" "domain-ubuntu" {
 
   provisioner "local-exec" {
     command = <<EOT
-        ansible-playbook ${path.module}/ansible/playbook.yml \
+        ansible-playbook ${path.module}/tasks/playbook.yml \
             -i '${self.network_interface[0].addresses[0]},' \
             -u ${var.ssh_username} \
             --private-key ${local.ssh_private_key}

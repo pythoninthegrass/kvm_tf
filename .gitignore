@@ -1,8 +1,9 @@
 # ETC
+facts/*
 tfplan
 
 # INCLUDE
-
+!**/.gitkeep
 
 # Local .terraform directories
 **/.terraform/*

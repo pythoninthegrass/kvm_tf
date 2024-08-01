@@ -1,0 +1,26 @@
+[all]
+localhost               ansible_connection=local
+
+[servers]
+10.13.37.25
+10.13.37.35
+10.13.37.36
+10.13.37.37
+
+[dev]
+192.168.8.155           ansible_user=lance
+192.168.8.200           ansible_user=lance
+192.168.25.187          ansible_user=lance
+lance@orb               ansible_user=lance
+192.168.105.7           ansible_user=lima
+
+[all:vars]
+ansible_become_method=sudo
+ansible_become_user=root
+ansible_python_interpreter=/usr/bin/python3
+ansible_async_dir=/tmp/.ansible_async
+
+[servers:vars]
+ansible_user=wpai
+
+# [dev:vars]
