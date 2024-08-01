@@ -1,3 +1,5 @@
+# code: language=ansible
+
 ---
 # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/apt_module.html
 # https://docs.ansible.com/ansible/latest/collections/ansible/builtin/systemd_module.html#examples
@@ -22,24 +24,24 @@
 
   tasks:
     - name: Install nginx
-      apt:
+      ansible.builtin.apt:
         name: nginx
         state: latest
         update_cache: yes
 
     - name: Enable service nginx and ensure it is not masked
-      systemd:
+      ansible.builtin.systemd:
         name: nginx
         enabled: yes
         masked: no
 
     - name: Ensure nginx is started
-      systemd:
+      ansible.builtin.systemd:
         state: started
         name: nginx
 
     - name: Add ssh key to authorized_keys
-      authorized_key:
+      ansible.builtin.authorized_key:
         user: ubuntu
         state: present
         key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"

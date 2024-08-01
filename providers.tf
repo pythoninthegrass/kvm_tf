@@ -1,4 +1,8 @@
 terraform {
+  required_version = ">= 1.9.3"
+
+  backend "local" {}
+
   required_providers {
     libvirt = {
       source  = "dmacvicar/libvirt"

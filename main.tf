@@ -8,7 +8,7 @@ provider "libvirt" {
 
 resource "random_id" "rng" {
   keepers = {
-    first = "${timestamp()}"
+    first = timestamp()
   }
   byte_length = 8
 }
@@ -26,18 +26,10 @@ resource "libvirt_volume" "ubuntu-qcow2" {
   format = "qcow2"
 }
 
-data "template_file" "user_data" {
-  template = file("${path.module}/config/cloud_init.yml")
-}
-
-data "template_file" "network_config" {
-  template = file("${path.module}/config/network_config.yml")
-}
-
 resource "libvirt_cloudinit_disk" "commoninit" {
   name           = "commoninit.iso"
-  user_data      = data.template_file.user_data.rendered
-  network_config = data.template_file.network_config.rendered
+  user_data      = local.user_data
+  network_config = local.network_config
   pool           = libvirt_pool.ubuntu.name
 }
 

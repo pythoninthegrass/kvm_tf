@@ -23,20 +23,12 @@ apt:
 packages:
   - ansible
   - apt-transport-https
-  - bats
-  - build-essential
   - ca-certificates
-  - cloud-init
   - curl
-  - docker-ce
-  - docker-ce-cli
-  - containerd.io
   - gnupg-agent
-  - net-tools
   - python3
   - python3-pip
-  - redis
-  - redis-server
+  - qemu-guest-agent
   - software-properties-common
   - tree
   - vim
@@ -57,6 +49,8 @@ users:
     home: /home/ubuntu
     shell: /bin/bash
     lock_passwd: false
+    ssh-authorized-keys:
+      - ${file("~/.ssh/id_rsa.pub")}
 
   - name: ansible
     plain_text_passwd: 'ansible'
@@ -68,23 +62,11 @@ users:
     shell: /bin/bash
     no_ssh_fingerprints: true
 
-groups:
-  - docker
-
-system_info:
-  default_user:
-    groups: [docker]
-
 ssh:
   emit_keys_to_console: false
 
-ssh-authorized-keys:
-  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDVxBZjuBcInSInH9hLYYrSiJRSZ4KihyZ1QyfSriFYjFK+Xqoo8qdn5qqTSt4DsSdub0x2DJSHuO3YaMfhGAxZbE2UAnCftERVCExmPWHyEEQ0RlUngMs+PUhPzuVgoQQNS81pqhR2Y6UFlFO13z/0K1G4VBvQkGudoWIZeOGwOfjugDY5nc46rHfko9rBxIseam0kzncE3tCiogeGjNR5usQGkpWSeEao7/F+AsxIkqE7LE7q8Gnf2nHopzT5NuIyHFp97W/ePRCaMfJFCg3BxhU9e9zj+me87rOgq/oZ+x9DuRQnb6E0A8cjVgDzue3ceU8BumJMYAv11cEaruhKd87s0O7TlKLADYQHV5kZqfcX9NdFhP8oJP2HjcbOVUrPAjUBQ1dTebrUmOlaP2cSKKyCDgGulA5opwViLGRbDGO+iUM06f6vCl1Eu5JEaW39lGKkmHLNULqIedGDN5vEo/kND7KdZi5ifUy4+MgWrJu9pl6SGO67H9Y2GhbTxYmRIi5EWGmBRIb12DQRlb+I52d9UzKX0O0wz6tcA6h7hdpqTBbEnEkeMiDz7Y4HtYCgY375kRQ107pem0fkQjmNJzhQZn/lhvPXEDdce/p75jTnEIaEtPAJRt3aWOXoQqgaPpiRtJ8xVsf46SNRk/oyCzNyXf0TiRyd38eGUNIt0w== lance@fedora
-  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDFnt3zU50NcdNvO37qPwqsXtD1lZ9Ka0bb8io5HO+8lE24ZnQ7GEWbf3VU3sKQqj6O0Itupz3n1NZoq0YOxW4TNwiAiYi4MBwBjoQ5ALkzoj/DthrsfoiQtd7MXsfIfDp4tp6ktxC3DtgON461L0r55KQVXdARc92R4iEsoCXnZtT2s7cDIZcbRIW13yiB3gBoazOsTH7vLHiPS61YkKd0Ih5zpc+xgHmLUe/iR7Qazy3nZ/OwTOlEh2nxzACHhFDKz38WiwfJtnoIlsmJaow3Cq56onRJeuOqbSGS9fETkumGXAVuJkkyCcjBbthvWGlfMsa1gAI9fmMphYAzfYq5ZrTur+Npy+ycunkkOJeFhkKqPA/GC9L3ogS4/k8JZTpVdLhqQmAoANiIXiKWMn1rleT5q+EgX/S4Q7n1szM8jLZRFH8tr0sKxVC+qUxTbylaJk7j4b3juS3iZQAERAwGGP3sG5wrFtvZjFABEINuGC/ijisGupca0p+7cEFb0ECLFZ5dMqguGuHnnF1YIBj/O0iTT18+uiJl3RrZ6v2EkKQIlKMy4A7fpeMnrbuHS9TcdtRPwBhRacyCUX2mhVz6hxqy9WZ2sU6uXzuXI8PHwWptk89/avWwLFzk0l1TrzFEdJNRzo5qE/ZisobQaZt67R74zS+ngsmWE+/Vcm3Oyw== lance@pythoninthegrass
-
 runcmd:
   - systemctl enable --now qemu-guest-agent.service
-  - systemctl enable --now docker
   - runuser -l ubuntu -c "wget -O - https://github.com/pythoninthegrass.keys | sudo tee -a ~/.ssh/authorized_keys"
   - runuser -l ubuntu -c "ssh-keyscan github.com >> ~/.ssh/known_hosts"
   - runuser -l ubuntu -c "mkdir -p /home/ubuntu/git"
@@ -95,54 +77,16 @@ runcmd:
   - runuser -l ansible -c "sudo chmod 0777 /var/log/ansible.log"
 
 write_files:
-  - path: /home/ubuntu/.bashrc
+  - path: /home/ubuntu/.bash_aliases
     owner: ubuntu:ubuntu
     permissions: '0644'
     append: false
     content: |
-      # Verify that shell is interactive
-      if [[ $- != *i* ]]; then return; fi
-
-      alias update='sudo apt update && sudo apt upgrade -y && sudo apt dist-upgrade -y && sudo apt autoremove -y && sudo apt auto-clean'
-      alias python='python3'
       alias ll='ls -FGlAhp'
       alias mkdir='mkdir -pv'
       alias ..='cd ../'
       alias ...='cd ../../'
       cd() { builtin cd "$@"; ll; }
-
-      HISTCONTROL=ignoreboth
-      shopt -s histappend
-      HISTSIZE=1000
-      HISTFILESIZE=2000
-
-      # Forward search in bash (step forward via ctrl-s)
-      stty -ixon
-
-      shopt -s checkwinsize
-
-      if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
-          debian_chroot=$(cat /etc/debian_chroot)
-      fi
-
-      case "$TERM" in
-        xterm-color|*-256color) color_prompt=yes;;
-      esac
-
-      if [ "$color_prompt" = yes ]; then
-          PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\] \nλ '
-      else
-          PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w \nλ '
-      fi
-      unset color_prompt force_color_prompt
-
-      case "$TERM" in
-      xterm*|rxvt*)
-          PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
-          ;;
-      *)
-          ;;
-      esac
 
   - path: /home/ubuntu/.bash_profile
     owner: ubuntu:ubuntu
@@ -166,9 +110,6 @@ write_files:
     content: |
       [core]
         excludesfile = /home/ubuntu/.gitignore
-      [user]
-        email = 4097471+pythoninthegrass@users.noreply.github.com
-        name = pythoninthegrass
       [pull]
         rebase = true
 
