@@ -1,0 +1,31 @@
+{
+  "packages": [
+    "asdf@latest",
+    "go-task@latest",
+    "jq@latest",
+    "pre-commit@latest",
+    "python@3.11",
+    "python311Packages.pip@latest",
+    "terraform-docs@latest",
+    "tflint@latest",
+    "tfupdate@latest",
+    "trivy@latest",
+    "uv@latest",
+    "yq@latest"
+  ],
+  "env": {
+    "VENV_DIR": ".venv"
+  },
+  "shell": {
+    "init_hook": [
+      ". $VENV_DIR/bin/activate",
+      "uv pip install -r requirements.txt"
+    ],
+    "scripts": {
+      "install": "task install",
+      "export-reqs": "task export-reqs",
+      "venv": "task venv"
+    }
+  },
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.12.0/.schema/devbox.schema.json"
+}
