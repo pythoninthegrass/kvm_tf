@@ -22,10 +22,16 @@ variable "ubuntu_24_img_url" {
   default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
 }
 
-variable "vm_hostname" {
-  description = "vm hostname"
+variable "vm_hostname_prefix" {
+  description = "vm hostname prefix"
   type        = string
-  default     = "ubuntu-tf"
+  default     = "ubuntu-tf-"
+}
+
+variable "vm_count" {
+  description = "number of VMs to create"
+  type        = number
+  default     = 1
 }
 
 variable "ssh_username" {

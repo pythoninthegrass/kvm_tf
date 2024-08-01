@@ -1,7 +1,7 @@
-output "ip" {
-  value = libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]
+output "ips" {
+  value = libvirt_domain.domain-ubuntu[*].network_interface[0].addresses[0]
 }
 
-output "url" {
-  value = "http://${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}"
+output "urls" {
+  value = [for ip in libvirt_domain.domain-ubuntu[*].network_interface[0].addresses[0] : "http://${ip}"]
 }

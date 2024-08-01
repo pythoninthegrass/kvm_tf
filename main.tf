@@ -34,7 +34,8 @@ resource "libvirt_cloudinit_disk" "commoninit" {
 }
 
 resource "libvirt_domain" "domain-ubuntu" {
-  name   = var.vm_hostname
+  count  = var.vm_count
+  name   = "${var.vm_hostname_prefix}${count.index + 1}"
   memory = 2048
   vcpu   = 2
 
@@ -43,7 +44,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   network_interface {
     network_name   = "default"
     wait_for_lease = true
-    hostname       = var.vm_hostname
+    hostname       = "${var.vm_hostname_prefix}${count.index + 1}"
   }
 
   console {
@@ -76,7 +77,7 @@ resource "libvirt_domain" "domain-ubuntu" {
     connection {
       type        = "ssh"
       user        = var.ssh_username
-      host        = libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]
+      host        = self.network_interface[0].addresses[0]
       private_key = file(local.ssh_private_key)
       timeout     = "2m"
     }
@@ -85,7 +86,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   provisioner "local-exec" {
     command = <<EOT
         ansible-playbook ${path.module}/ansible/playbook.yml \
-            --extra-vars 'target_host=["${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}"]' \
+            --extra-vars 'target_host=["${self.network_interface[0].addresses[0]}"]' \
             -u ${var.ssh_username} \
             --private-key ${local.ssh_private_key}
       EOT
