@@ -13,7 +13,7 @@ locals {
 variable "libvirt_disk_path" {
   description = "path for libvirt pool"
   type        = string
-  default     = "/opt/kvm/pool"
+  default     = "/var/lib/libvirt/images"
 }
 
 variable "ubuntu_24_img_url" {
