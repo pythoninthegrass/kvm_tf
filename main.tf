@@ -1,9 +1,9 @@
 provider "libvirt" {
   # localhost
-  # uri = "qemu:///system"
+  uri = "qemu:///system"
 
   # ssh
-  uri = "qemu+ssh://${local.server_user}@${local.server_host}/system"
+  # uri = "qemu+ssh://${local.server_user}@${local.server_host}/system"
 }
 
 resource "random_id" "rng" {
@@ -35,6 +35,14 @@ resource "libvirt_cloudinit_disk" "commoninit" {
   user_data      = local.user_data
   network_config = local.network_config
   pool           = libvirt_pool.ubuntu.name
+}
+
+resource "null_resource" "wait_for_vm" {
+  count = var.vm_count
+
+  provisioner "local-exec" {
+    command = "sleep 30"
+  }
 }
 
 resource "libvirt_domain" "domain-ubuntu" {
@@ -73,6 +81,8 @@ resource "libvirt_domain" "domain-ubuntu" {
     autoport    = true
   }
 
+  depends_on = [null_resource.wait_for_vm]
+
   provisioner "remote-exec" {
     inline = [
       "echo 'Hello World'"
@@ -90,9 +100,13 @@ resource "libvirt_domain" "domain-ubuntu" {
   provisioner "local-exec" {
     command = <<EOT
         ansible-playbook ${path.module}/ansible/playbook.yml \
-            --extra-vars 'target_host=["${self.network_interface[0].addresses[0]}"]' \
+            -i '${self.network_interface[0].addresses[0]},' \
             -u ${var.ssh_username} \
             --private-key ${local.ssh_private_key}
       EOT
+
+    environment = {
+      ANSIBLE_HOST_KEY_CHECKING = "False"
+    }
   }
 }

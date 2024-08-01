@@ -8,6 +8,10 @@ terraform {
       source  = "dmacvicar/libvirt"
       version = "0.7.4"
     }
+    null = {
+      source  = "hashicorp/null"
+      version = "3.2.2"
+    }
     random = {
       source  = "hashicorp/random"
       version = "3.5.1"
