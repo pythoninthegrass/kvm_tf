@@ -19,7 +19,8 @@ variable "libvirt_disk_path" {
 variable "ubuntu_24_img_url" {
   description = "ubuntu 24.04 image"
   type        = string
-  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  # default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  default     = "/tmp/noble-server-cloudimg-amd64.img"
 }
 
 variable "vm_hostname_prefix" {
