@@ -13,6 +13,10 @@ resource "random_id" "rng" {
   byte_length = 8
 }
 
+resource "random_id" "vm_id" {
+  byte_length = 8
+}
+
 resource "libvirt_pool" "ubuntu" {
   name = "ubuntu"
   type = "dir"
@@ -35,7 +39,7 @@ resource "libvirt_cloudinit_disk" "commoninit" {
 
 resource "libvirt_domain" "domain-ubuntu" {
   count  = var.vm_count
-  name   = "${var.vm_hostname_prefix}${count.index + 1}"
+  name   = "${var.vm_hostname_prefix}${count.index + 1}-${random_id.vm_id.hex}"
   memory = 2048
   vcpu   = 2
 
@@ -44,7 +48,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   network_interface {
     network_name   = "default"
     wait_for_lease = true
-    hostname       = "${var.vm_hostname_prefix}${count.index + 1}"
+    hostname       = "${var.vm_hostname_prefix}${count.index + 1}-${random_id.vm_id.hex}"
   }
 
   console {
