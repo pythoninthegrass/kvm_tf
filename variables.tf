@@ -5,6 +5,7 @@ locals {
   dot_env           = { for tuple in regexall(local.dot_env_regex, file(local.dot_env_file_path)) : tuple[0] => sensitive(tuple[1]) }
   server_user       = local.dot_env["SERVER_USER"]
   server_host       = local.dot_env["SERVER_HOST"]
+  ssh_private_key   = local.dot_env["SSH_PRIVATE_KEY"]
   user_data         = templatefile("${path.module}/config/cloud_init.yml", {})
   network_config    = templatefile("${path.module}/config/network_config.yml", {})
 }
@@ -31,10 +32,4 @@ variable "ssh_username" {
   description = "the ssh user to use"
   type        = string
   default     = "ubuntu"
-}
-
-variable "ssh_private_key" {
-  description = "the private key to use"
-  type        = string
-  default     = "~/.ssh/id_rsa"
 }

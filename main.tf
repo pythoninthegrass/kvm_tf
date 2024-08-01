@@ -77,7 +77,7 @@ resource "libvirt_domain" "domain-ubuntu" {
       type        = "ssh"
       user        = var.ssh_username
       host        = libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]
-      private_key = file(var.ssh_private_key)
+      private_key = file(local.ssh_private_key)
       timeout     = "2m"
     }
   }
@@ -87,7 +87,7 @@ resource "libvirt_domain" "domain-ubuntu" {
         ansible-playbook ${path.module}/ansible/playbook.yml \
             --extra-vars 'target_host=["${libvirt_domain.domain-ubuntu.network_interface[0].addresses[0]}"]' \
             -u ${var.ssh_username} \
-            --private-key ${var.ssh_private_key}
+            --private-key ${local.ssh_private_key}
       EOT
   }
 }
