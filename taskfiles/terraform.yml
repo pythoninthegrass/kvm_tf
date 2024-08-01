@@ -1,0 +1,52 @@
+version: "3.0"
+
+set: ['e', 'u', 'pipefail']
+shopt: ['globstar']
+
+env:
+
+tasks:
+  fmt:
+    desc: "Format terraform files"
+    cmds:
+      - terraform fmt
+
+  validate:
+    desc: "Validate terraform files"
+    cmds:
+      - terraform validate
+
+  init:
+    desc: "Initialize terraform"
+    cmds:
+      - terraform init -upgrade
+  run: once
+
+  plan:
+    desc: "Plan terraform"
+    deps:
+      - init
+    cmds:
+      - terraform plan -out tfplan
+
+  apply:
+    desc: "Apply terraform"
+    deps:
+      - plan
+    cmds:
+      - terraform apply tfplan
+
+  show:
+    desc: "Show terraform"
+    cmds:
+      - terraform show -json | jq -r '.'
+
+  refresh:
+    desc: "Refresh terraform"
+    cmds:
+      - terraform refresh
+
+  destroy:
+    desc: "Destroy terraform"
+    cmds:
+      - terraform destroy -auto-approve
