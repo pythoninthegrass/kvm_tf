@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# trap 2, 3, 15 signals
+trap 'exit' SIGINT SIGQUIT SIGTERM
+
+cat << 'DESCRIPTION' >/dev/null
+Standalone script to create a new Ubuntu 24.04 VM using cloud-init.
+
+Tests cloud-init configurations locally before deploying via the libvirt terraform provider.
+DESCRIPTION
+
+# environment variables
+IMG_NAME="noble-server-cloudimg-amd64.img"
+CODE_NAME="${IMG_NAME%-server-cloudimg-amd64.img}"
+IMG_URL="https://cloud-images.ubuntu.com/${CODE_NAME}/current/${IMG_NAME}"
+IMG_LOCATION="/tmp/${IMG_NAME}"
+IMG_SIZE="10G"
+VM_NAME="ubuntu-24.04"
+VM_IMAGE="${VM_NAME}.qcow2"
+VM_CPU=1
+VM_MEM=1024
+OS_VARIANT="ubuntu24.04"    # check with `virt-install --os-variant list | grep ubuntu`
+CLOUD_INIT_ISO="cloud-init.iso"
+USER_DATA="cloud_init.yml"
+NETWORK_CONFIG="network_config.yml"
+
+# check if cloud-init files exist
+if [ ! -f "$USER_DATA" ] || [ ! -f "$NETWORK_CONFIG" ]; then
+	echo "Error: cloud_init.yml or network_config.yml not found in the current directory."
+	exit 1
+fi
+
+# download ubuntu 24.04 cloud image if not present
+if [ ! -f "${IMG_LOCATION}" ]; then
+	wget "$IMG_URL" -o "${IMG_LOCATION}"
+fi
+
+# create a new disk image
+create_img() {
+	qemu-img create \
+		-f qcow2 \
+		-o backing_file="$IMG_LOCATION" \
+		"$VM_IMAGE" \
+		"$IMG_SIZE"
+}
+
+# generate cloud-init iso
+gen_cloud_init_iso() {
+	cloud-localds -v \
+		--network-config="$NETWORK_CONFIG" \
+		"$CLOUD_INIT_ISO" \
+		"$USER_DATA"
+}
+
+# launch the vm
+launch_vm() {
+	virt-install \
+		--name "$VM_NAME" \
+		--vcpus $VM_CPU \
+		--memory $VM_MEM \
+		--disk "$VM_IMAGE",device=disk,bus=virtio \
+		--disk "$CLOUD_INIT_ISO",device=cdrom \
+		--os-variant "$OS_VARIANT" \
+		--virt-type kvm \
+		--graphics none \
+		--network network=default,model=virtio \
+		--import
+}
+
+main() {
+	create_img
+	gen_cloud_init_iso
+	launch_vm
+	echo "VM $VM_NAME has been created and started."
+}
+main
+
+exit 0
