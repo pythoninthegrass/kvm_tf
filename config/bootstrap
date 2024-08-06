@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+# set -euo pipefail
 
 # trap 2, 3, 15 signals
 trap 'exit' SIGINT SIGQUIT SIGTERM
@@ -16,15 +16,27 @@ IMG_NAME="noble-server-cloudimg-amd64.img"
 CODE_NAME="${IMG_NAME%-server-cloudimg-amd64.img}"
 IMG_URL="https://cloud-images.ubuntu.com/${CODE_NAME}/current/${IMG_NAME}"
 IMG_LOCATION="/tmp/${IMG_NAME}"
-IMG_SIZE="10G"
 VM_NAME="ubuntu-24.04"
-VM_IMAGE="${VM_NAME}.qcow2"
+LIBVIRT_DISK_PATH="/var/lib/libvirt/images/${VM_NAME}-resource-pool"
+VM_IMAGE="${LIBVIRT_DISK_PATH}/${VM_NAME}.qcow2"
+CLOUD_INIT_ISO="${LIBVIRT_DISK_PATH}/cloud-init.iso"
+IMG_SIZE="10G"
 VM_CPU=1
 VM_MEM=1024
 OS_VARIANT="ubuntu24.04"    # check with `virt-install --os-variant list | grep ubuntu`
-CLOUD_INIT_ISO="cloud-init.iso"
 USER_DATA="cloud_init.yml"
 NETWORK_CONFIG="network_config.yml"
+
+# verify if the script is run as root
+if [ "$(id -u)" -ne 0 ]; then
+    echo "Error: This script must be run as root."
+    exit 1
+fi
+
+# create the libvirt disk path if it does not exist
+if [ ! -d "$LIBVIRT_DISK_PATH" ]; then
+    mkdir -p "$LIBVIRT_DISK_PATH"
+fi
 
 # check if cloud-init files exist
 if [ ! -f "$USER_DATA" ] || [ ! -f "$NETWORK_CONFIG" ]; then
@@ -39,9 +51,15 @@ fi
 
 # create a new disk image
 create_img() {
+    local backing_file
+    local backing_fmt
+
+    backing_file="$IMG_LOCATION"
+    backing_fmt=$(qemu-img info --output=json "$backing_file" | jq -r '.format')
+
 	qemu-img create \
 		-f qcow2 \
-		-o backing_file="$IMG_LOCATION" \
+		-o backing_file="$backing_file",backing_fmt="$backing_fmt" \
 		"$VM_IMAGE" \
 		"$IMG_SIZE"
 }
@@ -54,27 +72,61 @@ gen_cloud_init_iso() {
 		"$USER_DATA"
 }
 
+# check if the vm exists
+check_vm() {
+    if virsh dominfo "$VM_NAME" >/dev/null 2>&1; then
+        echo "Error: VM $VM_NAME already exists."
+        return 1
+    else
+        return 0
+    fi
+}
+
 # launch the vm
 launch_vm() {
-	virt-install \
-		--name "$VM_NAME" \
-		--vcpus $VM_CPU \
-		--memory $VM_MEM \
-		--disk "$VM_IMAGE",device=disk,bus=virtio \
-		--disk "$CLOUD_INIT_ISO",device=cdrom \
-		--os-variant "$OS_VARIANT" \
-		--virt-type kvm \
-		--graphics none \
-		--network network=default,model=virtio \
-		--import
+	if virt-install \
+        --name "$VM_NAME" \
+        --vcpus $VM_CPU \
+        --memory $VM_MEM \
+        --disk "$VM_IMAGE",device=disk,bus=virtio \
+        --disk "$CLOUD_INIT_ISO",device=cdrom \
+        --os-variant "$OS_VARIANT" \
+        --virt-type kvm \
+        --graphics none \
+        --network network=default,model=virtio \
+        --import \
+        --noautoconsole
+    then
+        echo "VM $VM_NAME has been created and started."
+    else
+        echo "Error: VM $VM_NAME could not be created."
+        return 1
+    fi
+}
+
+# destroy the vm
+destroy_vm() {
+    virsh shutdown "$VM_NAME" >/dev/null 2>&1
+    virsh undefine "$VM_NAME" \
+    && rm -rf "$LIBVIRT_DISK_PATH"
+    if [ $? -ne 0 ]; then
+        echo "Error: VM $VM_NAME could not be destroyed."
+        exit 1
+    else
+        echo "VM $VM_NAME has been destroyed."
+        exit 0
+    fi
 }
 
 main() {
+    if [ $# -eq 1 ] && [ "$1" == "destroy" ]; then
+        destroy_vm
+    fi
+    check_vm
 	create_img
 	gen_cloud_init_iso
 	launch_vm
-	echo "VM $VM_NAME has been created and started."
 }
-main
+main "$@"
 
 exit 0

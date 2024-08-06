@@ -38,43 +38,37 @@ ssh_pwauth: true
 disable_root: false
 
 chpasswd:
-  list: |
-     root:toor
-  expire: false
+  users:
+    - {name: root, password: toor, type: text}
+  expire: true
 
 users:
+  users:
   - name: ubuntu
-    sudo: ALL=(ALL) NOPASSWD:ALL
-    groups: users, admin
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    groups:
+      - admin
+      - users
+      - wheel
     home: /home/ubuntu
     shell: /bin/bash
     lock_passwd: false
-    ssh-authorized-keys:
-      - ${file("~/.ssh/id_rsa.pub")}
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIUQ//QOZBVOyG9ieqMG2vVVP7KMI0B9DIyXE4PioCTaw1P2/oGRcqr0pAmqrxtO7ADNcFSwW5hdAr9L4KGc+CUns/nZ16M1fhfuW6tVnYGaSgwGYCIU1DCJ+ofvdWJOkAAmvui9w6g5VgwxdC2V27lITgy57E9XwO16diywrKMT9M5sypX51nVQOgeDJR8fO8LaT0kWuBtOtOuFNaZzD0eHiciojM95alIbJthCT10fvTGVOQGdODzIuKlVQjIqOZ78qFNB0E9rfeTuLgdZ5CRrFqkDfaCYMwgNWmzBt3YnomnhndpuqwftRdOoNi2FmJegZDp5prDOTisfB6r4TJriWq165hF9M8RKOqyyq0C0+h7+UXlhhZk4WWEOVsSTAx2MlFMdk9UrOMdqq2dqFZfaWSPRvM8m8JugTXloYhoK/nderzTa2qoKJCZadJG+ul+wQJpS/dqItnGowcO7mgFSsxMhuCJbxWjFpjwvZkVBLl60f9l2FU1/515onFwz0= lance.stephens@mbp.local
 
   - name: ansible
-    plain_text_passwd: 'ansible'
-    sudo: [ALL=(ALL) NOPASSWD:ALL]
-    gecos: Ansible
-    home: /home/ansible
-    groups: [admin, users, wheel]
-    lock_passwd: true
+    sudo: 'ALL=(ALL) NOPASSWD:ALL'
+    groups:
+      - admin
+      - users
+      - wheel
     shell: /bin/bash
-    no_ssh_fingerprints: true
+    lock_passwd: true
+    ssh_authorized_keys:
+      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIUQ//QOZBVOyG9ieqMG2vVVP7KMI0B9DIyXE4PioCTaw1P2/oGRcqr0pAmqrxtO7ADNcFSwW5hdAr9L4KGc+CUns/nZ16M1fhfuW6tVnYGaSgwGYCIU1DCJ+ofvdWJOkAAmvui9w6g5VgwxdC2V27lITgy57E9XwO16diywrKMT9M5sypX51nVQOgeDJR8fO8LaT0kWuBtOtOuFNaZzD0eHiciojM95alIbJthCT10fvTGVOQGdODzIuKlVQjIqOZ78qFNB0E9rfeTuLgdZ5CRrFqkDfaCYMwgNWmzBt3YnomnhndpuqwftRdOoNi2FmJegZDp5prDOTisfB6r4TJriWq165hF9M8RKOqyyq0C0+h7+UXlhhZk4WWEOVsSTAx2MlFMdk9UrOMdqq2dqFZfaWSPRvM8m8JugTXloYhoK/nderzTa2qoKJCZadJG+ul+wQJpS/dqItnGowcO7mgFSsxMhuCJbxWjFpjwvZkVBLl60f9l2FU1/515onFwz0= lance.stephens@mbp.local
 
 ssh:
   emit_keys_to_console: false
-
-runcmd:
-  - systemctl enable --now qemu-guest-agent.service
-  - runuser -l ubuntu -c "wget -O - https://github.com/pythoninthegrass.keys | sudo tee -a ~/.ssh/authorized_keys"
-  - runuser -l ubuntu -c "ssh-keyscan github.com >> ~/.ssh/known_hosts"
-  - runuser -l ubuntu -c "mkdir -p /home/ubuntu/git"
-  - runuser -l ubuntu -c "sudo chmod -R 0777 /home/ubuntu/git"
-  - runuser -l ubuntu -c "sudo chown -R ubuntu:ubuntu /home/ubuntu/git"
-  - runuser -l ansible -c "sudo touch /var/log/ansible.log"
-  - runuser -l ansible -c "sudo chown ansible:ansible /var/log/ansible.log"
-  - runuser -l ansible -c "sudo chmod 0777 /var/log/ansible.log"
 
 write_files:
   - path: /home/ubuntu/.bash_aliases
@@ -87,6 +81,13 @@ write_files:
       alias ..='cd ../'
       alias ...='cd ../../'
       cd() { builtin cd "$@"; ll; }
+
+  - path: /etc/netplan/01-netcfg.yaml
+    owner: root:root
+    permissions: '0644'
+    append: false
+    content: |
+      ${file("network_config.yml")}
 
   - path: /home/ubuntu/.bash_profile
     owner: ubuntu:ubuntu
@@ -112,5 +113,19 @@ write_files:
         excludesfile = /home/ubuntu/.gitignore
       [pull]
         rebase = true
+
+bootcmd:
+  - netplan apply
+
+runcmd:
+  - systemctl enable --now qemu-guest-agent.service
+  - wget -O - https://github.com/pythoninthegrass.keys | sudo tee -a /home/ubuntu/.ssh/authorized_keys
+  - ssh-keyscan github.com >> /home/ubuntu/.ssh/known_hosts
+  - mkdir -p /home/ubuntu/git
+  - chown ubuntu:ubuntu /home/ubuntu/git
+  - chmod 755 /home/ubuntu/git
+  - sudo touch /var/log/ansible.log
+  - sudo chown ansible:ansible /var/log/ansible.log
+  - sudo chmod 0777 /var/log/ansible.log
 
 final_message: "The system is finally up, after $UPTIME seconds"
