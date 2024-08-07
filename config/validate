@@ -20,8 +20,11 @@ if [ "$#" -ne 1 ]; then
 fi
 
 CLOUD_INIT_FILE=$(realpath "$1")
+CONFIG_FILE=$(basename "$CLOUD_INIT_FILE")
 
 docker run --rm \
-	-v "${CLOUD_INIT_FILE}:/app/cloud_init.yml" \
+    --workdir /app \
+	-v "${CLOUD_INIT_FILE}:/app/${CONFIG_FILE}" \
 	cloud-init \
-	devel schema --config-file /app/cloud_init.yml
+	devel schema \
+    --config-file ${CONFIG_FILE}
