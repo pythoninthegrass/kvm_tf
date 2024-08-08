@@ -13,6 +13,7 @@
       ansible.builtin.apt:
         pkg:
           - bridge-utils
+          - cloud-image-utils
           - libvirt-clients
           - libvirt-daemon-system
           - qemu-kvm
@@ -22,6 +23,7 @@
         update_cache: true
         cache_valid_time: 1800
       when: ansible_os_family == 'Debian'
+      tags: qa
 
     # TODO: test on redhat os
     - name: Install packages (Red Hat)
