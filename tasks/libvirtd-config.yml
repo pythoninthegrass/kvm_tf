@@ -8,43 +8,49 @@
   vars:
     libvirt_user: "{{ ansible_user }}"
     libvirt_group: "libvirt"
-  tasks:
-    - name: Install packages (Debian)
-      ansible.builtin.apt:
-        pkg:
-          - bridge-utils
-          - cloud-image-utils
-          - libvirt-clients
-          - libvirt-daemon-system
-          - qemu-kvm
-          - virt-manager
-          - virtinst
-        state: present
-        update_cache: true
-        cache_valid_time: 1800
-      when: ansible_os_family == 'Debian'
-      tags: qa
+  roles:
+    - role: pre-tasks
+      tags: pre
 
-    # TODO: test on redhat os
-    - name: Install packages (Red Hat)
-      ansible.builtin.dnf:
-        name:
-          - bridge-utils
-          - libvirt-client
-          - libvirt-daemon
-          - qemu-kvm
-          - virt-manager
-          - virt-install
+    - role: geerlingguy.swap
+      swap_file_state: absent
+      when: ansible_os_family == "RedHat"
+      tags: pre
+  tasks:
+    - name: Install common dependencies
+      ansible.builtin.package:
+        name: "{{ item }}"
         state: present
+      with_items:
+        - qemu-kvm
+        - bridge-utils
+        - virt-manager
+
+    - name: Install additional packages for Debian family
+      ansible.builtin.apt:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - libvirt-clients
+        - libvirt-daemon
+        - libvirt-daemon-system
+      when: ansible_os_family == 'Debian'
+
+    - name: Install additional packages for RedHat family
+      ansible.builtin.dnf:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - libvirt
+        - virt-install
       when: ansible_os_family == 'RedHat'
-      tags: qa
 
     - name: Increase network buffer sizes
       ansible.posix.sysctl:
         name: "{{ item.name }}"
         value: "{{ item.value }}"
         state: present
-        reload: true
+        reload: yes
       loop:
         - { name: 'net.core.rmem_max', value: '16777216' }
         - { name: 'net.core.wmem_max', value: '16777216' }
@@ -59,30 +65,30 @@
         - { limit_type: 'soft' }
         - { limit_type: 'hard' }
 
-    - name: Add user to libvirt group
-      ansible.builtin.user:
-        name: "{{ libvirt_user }}"
-        groups: "{{ item }}"
-        append: yes
-      loop:
-        - kvm
-        - libvirt
-      tags: qa
+    - name: Setup IP forwarding in 99-ipforward.conf
+      ansible.builtin.blockinfile:
+        path: /etc/sysctl.d/99-ipforward.conf
+        block: |
+          net.ipv4.ip_forward = 1
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        marker_begin: "BEGIN"
+        marker_end: "END"
+        create: true
+        backup: no
+        state: present
 
     - name: Set user and group in qemu.conf
-      ansible.builtin.lineinfile:
+      ansible.builtin.blockinfile:
         path: /etc/libvirt/qemu.conf
-        regexp: "{{ item.regexp }}"
-        line: "{{ item.line }}"
-        insertafter: '^#\s*user\s*=.*"100"'
-      loop:
-        - { regexp: '^user\s*=.*', line: 'user = "{{ libvirt_user }}"' }
-        - { regexp: '^group\s*=.*', line: 'group = "{{ libvirt_group }}"' }
-
-    - name: Restart networking service
-      ansible.builtin.systemd:
-        name: networking
-        state: restarted
+        block: |
+          user = "{{ libvirt_user }}"
+          group = "{{ libvirt_group }}"
+        insertafter: '^#user = "qemu"'
+        marker: "# {mark} ANSIBLE MANAGED BLOCK"
+        marker_begin: "BEGIN"
+        marker_end: "END"
+        backup: no
+        state: present
 
     - name: Restart libvirtd service
       ansible.builtin.systemd:
