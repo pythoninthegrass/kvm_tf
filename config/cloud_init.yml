@@ -95,7 +95,12 @@ write_files:
     permissions: '0644'
     append: false
     content: |
-      ${file("network_config.yml")}
+      version: 2
+      ethernets:
+        ens3:
+          dhcp4: true
+          nameservers:
+            addresses: [8.8.8.8, 8.8.4.4]
 
   - path: /home/ubuntu/.bash_profile
     owner: ubuntu:ubuntu
