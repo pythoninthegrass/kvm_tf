@@ -1,8 +1,6 @@
 # ETC
 facts/*
-
-# INCLUDE
-!**/.gitkeep
+hosts
 
 # Local .terraform directories
 **/.terraform/*
@@ -251,3 +249,7 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# INCLUDE
+!**/*.example
+!**/.gitkeep
