@@ -1,33 +1,46 @@
 {
-  "packages": [
-    "asdf@latest",
-    "go-task@latest",
-    "jq@latest",
-    "pre-commit@latest",
-    "python@3.11",
-    "python311Packages.pip@latest",
-    "terraform-docs@latest",
-    "tflint@latest",
-    "tfupdate@latest",
-    "trivy@latest",
-    "uv@latest",
-    "yq@latest"
-  ],
+  "packages": {
+    "doppler": "latest",
+    "gh": "latest",
+    "git": "latest",
+    "glib": "latest",
+    "glibcLocalesUtf8": {
+      "version": "latest",
+      "platforms": [
+        "x86_64-linux",
+        "aarch64-linux"
+      ]
+    },
+    "gnumake": "latest",
+    "go-task": "latest",
+    "uv": "latest"
+  },
   "env": {
-    "VENV_DIR": ".venv"
+    "VENV_DIR": ".venv",
+    "UV_HTTP_TIMEOUT": "90",
+    "UV_COMPILE_BYTECODE": "1",
+    "UV_LINK_MODE": "copy",
+    "DOPPLER_ENABLE_VERSION_CHECK": "false",
+    "LANG": "en_US.UTF-8",
+    "LC_ALL": "en_US.UTF-8",
+    "LANGUAGE": "en_US.UTF-8",
+    "ANSIBLE_HOST_KEY_CHECKING": "false"
   },
   "shell": {
     "init_hook": [
+      "[ -d ${VENV_DIR} ] || uv venv ${VENV_DIR}",
       ". $VENV_DIR/bin/activate",
-      "uv pip install -r requirements.txt",
-      "source ./bin/ansible_functions.sh",
-      "export ANSIBLE_BECOME_PASS=$(askpass --sudo)"
+      "uv pip install -r pyproject.toml --all-extras",
+      "export ANSIBLE_BECOME_PASS=$(skate get ansible_become_password)",
+      "export SUDO_PASS=${ANSIBLE_BECOME_PASS}",
+      "export GHCR_USERNAME=$(skate get ghcr_username)",
+      "export GHCR_TOKEN=$(skate get ghcr_token)"
     ],
     "scripts": {
-      "install": "task install",
-      "export-reqs": "task export-reqs",
-      "venv": "task venv"
+      "install": "uv pip install -r pyproject.toml --all-extras",
+      "export-reqs": "uv pip freeze > requirements.txt",
+      "venv": "uv venv ${VENV_DIR}",
+      "test": "pytest"
     }
-  },
-  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.12.0/.schema/devbox.schema.json"
+  }
 }
