@@ -6,40 +6,21 @@ timezone: "America/Chicago"
 
 hostname: ubuntu
 
-package_update: true # default: true
-package_upgrade: false # default: false
-# https://github.com/number5/cloud-init/blob/main/doc/examples/cloud-config-apt.txt#L21
-apt_get_command:
-  [
-    "apt-get",
-    "--option=Dpkg::Options::=--force-confold",
-    "--option=Dpkg::options::=--force-unsafe-io",
-    "--assume-yes",
-    "--quiet",
-    "--no-install-recommends",
-  ]
+package_update: true    # default: true
+package_upgrade: false  # default: false
 
 apt:
   sources:
-    deadsnakes.list:
-      source: deb http://ppa.launchpad.net/deadsnakes/ppa/ubuntu $RELEASE main
-      keyid: F23C5A6CF475977595C89F51BA6932366A755776
     docker.list:
       source: deb https://download.docker.com/linux/ubuntu $RELEASE stable
       keyid: 9DC858229FC7DD38854AE2D88D81803C0EBFCD88
 
 packages:
-  - ansible
   - apt-transport-https
   - ca-certificates
   - curl
-  - gnupg-agent
-  - python3
-  - python3-pip
   - qemu-guest-agent
-  - software-properties-common
-  - tree
-  - vim
+  - wget
 
 ssh_pwauth: true
 
@@ -47,11 +28,10 @@ disable_root: false
 
 chpasswd:
   users:
-    - {name: root, password: toor, type: text}
-  expire: true
+    - root:toor
+  expire: false
 
 users:
-  users:
   - name: ubuntu
     sudo: 'ALL=(ALL) NOPASSWD:ALL'
     groups:
@@ -61,8 +41,8 @@ users:
     home: /home/ubuntu
     shell: /bin/bash
     lock_passwd: false
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIUQ//QOZBVOyG9ieqMG2vVVP7KMI0B9DIyXE4PioCTaw1P2/oGRcqr0pAmqrxtO7ADNcFSwW5hdAr9L4KGc+CUns/nZ16M1fhfuW6tVnYGaSgwGYCIU1DCJ+ofvdWJOkAAmvui9w6g5VgwxdC2V27lITgy57E9XwO16diywrKMT9M5sypX51nVQOgeDJR8fO8LaT0kWuBtOtOuFNaZzD0eHiciojM95alIbJthCT10fvTGVOQGdODzIuKlVQjIqOZ78qFNB0E9rfeTuLgdZ5CRrFqkDfaCYMwgNWmzBt3YnomnhndpuqwftRdOoNi2FmJegZDp5prDOTisfB6r4TJriWq165hF9M8RKOqyyq0C0+h7+UXlhhZk4WWEOVsSTAx2MlFMdk9UrOMdqq2dqFZfaWSPRvM8m8JugTXloYhoK/nderzTa2qoKJCZadJG+ul+wQJpS/dqItnGowcO7mgFSsxMhuCJbxWjFpjwvZkVBLl60f9l2FU1/515onFwz0= lance.stephens@mbp.local
+    ssh_import_id:
+      - gh:pythoninthegrass
 
   - name: ansible
     sudo: 'ALL=(ALL) NOPASSWD:ALL'
@@ -72,73 +52,39 @@ users:
       - wheel
     shell: /bin/bash
     lock_passwd: true
-    ssh_authorized_keys:
-      - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDIUQ//QOZBVOyG9ieqMG2vVVP7KMI0B9DIyXE4PioCTaw1P2/oGRcqr0pAmqrxtO7ADNcFSwW5hdAr9L4KGc+CUns/nZ16M1fhfuW6tVnYGaSgwGYCIU1DCJ+ofvdWJOkAAmvui9w6g5VgwxdC2V27lITgy57E9XwO16diywrKMT9M5sypX51nVQOgeDJR8fO8LaT0kWuBtOtOuFNaZzD0eHiciojM95alIbJthCT10fvTGVOQGdODzIuKlVQjIqOZ78qFNB0E9rfeTuLgdZ5CRrFqkDfaCYMwgNWmzBt3YnomnhndpuqwftRdOoNi2FmJegZDp5prDOTisfB6r4TJriWq165hF9M8RKOqyyq0C0+h7+UXlhhZk4WWEOVsSTAx2MlFMdk9UrOMdqq2dqFZfaWSPRvM8m8JugTXloYhoK/nderzTa2qoKJCZadJG+ul+wQJpS/dqItnGowcO7mgFSsxMhuCJbxWjFpjwvZkVBLl60f9l2FU1/515onFwz0= lance.stephens@mbp.local
+    ssh_import_id:
+      - gh:pythoninthegrass
 
 ssh:
   emit_keys_to_console: false
 
 write_files:
-  - path: /home/ubuntu/.bash_aliases
-    owner: ubuntu:ubuntu
-    permissions: '0644'
-    append: false
-    content: |
-      alias ll='ls -FGlAhp'
-      alias mkdir='mkdir -pv'
-      alias ..='cd ../'
-      alias ...='cd ../../'
-      cd() { builtin cd "$@"; ll; }
-
   - path: /etc/netplan/01-netcfg.yaml
     owner: root:root
-    permissions: '0644'
+    permissions: '0600'
     append: false
     content: |
-      version: 2
-      ethernets:
-        ens3:
-          dhcp4: true
-          nameservers:
-            addresses: [8.8.8.8, 8.8.4.4]
-
-  - path: /home/ubuntu/.bash_profile
-    owner: ubuntu:ubuntu
-    content: |
-      [[ -s ~/.bashrc ]] && source ~/.bashrc
-
-  - path: /home/ubuntu/.gitignore
-    owner: ubuntu:ubuntu
-    content: |
-      .env
-      .gitattributes
-      .venv
-      *.bak
-      **/scratch*
-      creds/
-      service_account.json
-      settings.ini
-
-  - path: /home/ubuntu/.gitconfig
-    owner: ubuntu:ubuntu
-    content: |
-      [core]
-        excludesfile = /home/ubuntu/.gitignore
-      [pull]
-        rebase = true
-
-bootcmd:
-  - netplan apply
+      network:
+        version: 2
+        ethernets:
+          ens3:
+            dhcp4: true
+            nameservers:
+              addresses: [8.8.8.8, 8.8.4.4]
 
 runcmd:
   - systemctl enable --now qemu-guest-agent.service
-  - wget -O - https://github.com/pythoninthegrass.keys | sudo tee -a /home/ubuntu/.ssh/authorized_keys
+  - mkdir -p /home/ubuntu/.ssh
   - ssh-keyscan github.com >> /home/ubuntu/.ssh/known_hosts
-  - mkdir -p /home/ubuntu/git
-  - chown ubuntu:ubuntu /home/ubuntu/git
-  - chmod 755 /home/ubuntu/git
-  - sudo touch /var/log/ansible.log
-  - sudo chown ansible:ansible /var/log/ansible.log
-  - sudo chmod 0777 /var/log/ansible.log
+  - chown -R ubuntu:ubuntu /home/ubuntu/.ssh
+  - chmod 700 /home/ubuntu/.ssh
+  - chmod 600 /home/ubuntu/.ssh/known_hosts
+  - mkdir -p /home/ansible/.ssh
+  - chown -R ansible:ansible /home/ansible/.ssh
+  - chmod 700 /home/ansible/.ssh
+  - touch /var/log/ansible.log
+  - chown ansible:ansible /var/log/ansible.log
+  - chmod 0777 /var/log/ansible.log
+  - netplan apply
 
 final_message: "The system is finally up, after $UPTIME seconds"
