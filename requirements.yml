@@ -1,0 +1,13 @@
+---
+collections:
+  - name: ansible.posix
+  - name: community.docker
+  - name: community.general
+
+roles:
+  - name: geerlingguy.swap
+    src: https://github.com/pythoninthegrass/ansible-role-swap.git
+    version: master
+  - name: geerlingguy.docker
+  - name: geerlingguy.node_exporter
+  - name: geerlingguy.pip
