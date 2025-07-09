@@ -25,11 +25,19 @@ resource "libvirt_pool" "ubuntu" {
   }
 }
 
-resource "libvirt_volume" "ubuntu-qcow2" {
-  name   = "ubuntu-qcow2"
+resource "libvirt_volume" "ubuntu-qcow2-base" {
+  name   = "ubuntu-qcow2-base"
   pool   = libvirt_pool.ubuntu.name
   source = var.ubuntu_24_img_url
   format = "qcow2"
+}
+
+resource "libvirt_volume" "ubuntu-qcow2" {
+  count           = var.vm_count
+  name            = "ubuntu-qcow2-${count.index}"
+  pool            = libvirt_pool.ubuntu.name
+  base_volume_id  = libvirt_volume.ubuntu-qcow2-base.id
+  format          = "qcow2"
 }
 
 resource "libvirt_cloudinit_disk" "commoninit" {
@@ -74,7 +82,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   }
 
   disk {
-    volume_id = libvirt_volume.ubuntu-qcow2.id
+    volume_id = libvirt_volume.ubuntu-qcow2[count.index].id
   }
 
   graphics {

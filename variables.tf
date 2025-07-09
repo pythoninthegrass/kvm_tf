@@ -30,7 +30,7 @@ variable "vm_hostname_prefix" {
 variable "vm_count" {
   description = "number of VMs to create"
   type        = number
-  default     = 1
+  default     = 3
 }
 
 variable "ssh_username" {
