@@ -1,9 +1,9 @@
 provider "libvirt" {
   # localhost
-  uri = "qemu:///system"
+  # uri = "qemu:///system"
 
   # ssh
-  # uri = "qemu+ssh://${local.server_user}@${local.server_host}/system"
+  uri = "qemu+ssh://${local.server_user}@${local.server_host}/system?no_verify=1"
 }
 
 resource "random_id" "rng" {
@@ -20,7 +20,9 @@ resource "random_id" "vm_id" {
 resource "libvirt_pool" "ubuntu" {
   name = "ubuntu"
   type = "dir"
-  path = "${var.libvirt_disk_path}-${random_id.rng.hex}"
+  target {
+    path = "${var.libvirt_disk_path}-${random_id.rng.hex}"
+  }
 }
 
 resource "libvirt_volume" "ubuntu-qcow2" {
@@ -41,7 +43,7 @@ resource "null_resource" "wait_for_vm" {
   count = var.vm_count
 
   provisioner "local-exec" {
-    command = "sleep 30"
+    command = "sleep 60"
   }
 }
 
@@ -85,15 +87,22 @@ resource "libvirt_domain" "domain-ubuntu" {
 
   provisioner "remote-exec" {
     inline = [
-      "echo 'Hello World'"
+      "cloud-init status --wait",
+      "echo 'Cloud-init completed, system ready'"
     ]
 
     connection {
-      type        = "ssh"
-      user        = var.ssh_username
-      host        = self.network_interface[0].addresses[0]
-      private_key = file(local.ssh_private_key)
-      timeout     = "2m"
+      type         = "ssh"
+      user         = var.ssh_username
+      host         = self.network_interface[0].addresses[0]
+      private_key  = file(var.ssh_private_key)
+      timeout      = "2m"
+      agent        = false
+      host_key     = null
+
+      bastion_host        = local.server_host
+      bastion_user        = local.server_user
+      bastion_private_key = file(var.ssh_private_key)
     }
   }
 
@@ -102,7 +111,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   #       ansible-playbook ${path.module}/tasks/playbook.yml \
   #           -i '${self.network_interface[0].addresses[0]},' \
   #           -u ${var.ssh_username} \
-  #           --private-key ${local.ssh_private_key}
+  #           --private-key ${var.ssh_private_key}
   #     EOT
 
   #   environment = {
