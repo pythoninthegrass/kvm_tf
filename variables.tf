@@ -6,7 +6,6 @@ locals {
   server_user       = local.dot_env["SERVER_USER"]
   server_host       = local.dot_env["SERVER_HOST"]
   user_data         = templatefile("${path.module}/config/cloud_init.yml", {})
-  network_config    = templatefile("${path.module}/config/network_config.yml", {})
 }
 
 variable "libvirt_disk_path" {

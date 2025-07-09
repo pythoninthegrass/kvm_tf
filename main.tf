@@ -14,6 +14,52 @@ resource "random_id" "vm_id" {
   byte_length = 8
 }
 
+# Generate MAC addresses for each VM
+resource "random_id" "vm_mac" {
+  count       = var.vm_count
+  byte_length = 6
+}
+
+# Create custom network with static routes
+resource "libvirt_network" "vm_network" {
+  name      = "vm-network-${random_id.rng.hex}"
+  mode      = "nat"
+  domain    = "vm.local"
+  addresses = ["192.168.100.0/24"]
+  autostart = true
+
+  dhcp {
+    enabled = false  # Disable DHCP for static IP assignment
+  }
+
+  # Static routes - example routes to external networks
+  routes {
+    cidr    = "10.0.0.0/8"
+    gateway = "192.168.100.1"
+  }
+  
+  routes {
+    cidr    = "172.16.0.0/12"
+    gateway = "192.168.100.1"
+  }
+  
+  routes {
+    cidr    = "203.0.113.0/24"
+    gateway = "192.168.100.1"
+  }
+
+  dns {
+    enabled    = true
+    local_only = false
+  }
+  
+  lifecycle {
+    ignore_changes = [
+      dhcp[0].enabled, # see https://github.com/dmacvicar/terraform-provider-libvirt/issues/998
+    ]
+  }
+}
+
 resource "libvirt_pool" "ubuntu" {
   name = "ubuntu"
   type = "dir"
@@ -38,19 +84,15 @@ resource "libvirt_volume" "ubuntu-qcow2" {
 }
 
 resource "libvirt_cloudinit_disk" "commoninit" {
-  name           = "commoninit.iso"
+  count          = var.vm_count
+  name           = "commoninit-${count.index}.iso"
   user_data      = local.user_data
-  network_config = local.network_config
+  network_config = templatefile("${path.module}/config/network_config.yml", {
+    vm_ip = "192.168.100.${10 + count.index}"
+  })
   pool           = libvirt_pool.ubuntu.name
 }
 
-resource "null_resource" "wait_for_vm" {
-  count = var.vm_count
-
-  provisioner "local-exec" {
-    command = "sleep 60"
-  }
-}
 
 resource "libvirt_domain" "domain-ubuntu" {
   count  = var.vm_count
@@ -58,11 +100,12 @@ resource "libvirt_domain" "domain-ubuntu" {
   memory = 2048
   vcpu   = 2
 
-  cloudinit = libvirt_cloudinit_disk.commoninit.id
+  cloudinit = libvirt_cloudinit_disk.commoninit[count.index].id
 
   network_interface {
-    network_name   = "default"
-    wait_for_lease = true
+    network_id     = libvirt_network.vm_network.id
+    mac            = "52:54:00:${substr(random_id.vm_mac[count.index].hex, 0, 2)}:${substr(random_id.vm_mac[count.index].hex, 2, 2)}:${substr(random_id.vm_mac[count.index].hex, 4, 2)}"
+    addresses      = ["192.168.100.${10 + count.index}"]
     hostname       = "${var.vm_hostname_prefix}${count.index + 1}-${random_id.vm_id.hex}"
   }
 
@@ -88,7 +131,6 @@ resource "libvirt_domain" "domain-ubuntu" {
     autoport    = true
   }
 
-  depends_on = [null_resource.wait_for_vm]
 
   provisioner "remote-exec" {
     inline = [
@@ -99,7 +141,7 @@ resource "libvirt_domain" "domain-ubuntu" {
     connection {
       type         = "ssh"
       user         = var.ssh_username
-      host         = self.network_interface[0].addresses[0]
+      host         = "192.168.100.${10 + count.index}"
       private_key  = file(var.ssh_private_key)
       timeout      = "2m"
       agent        = false
@@ -114,7 +156,7 @@ resource "libvirt_domain" "domain-ubuntu" {
   # provisioner "local-exec" {
   #   command = <<EOT
   #       ansible-playbook ${path.module}/tasks/playbook.yml \
-  #           -i '${self.network_interface[0].addresses[0]},' \
+  #           -i '192.168.100.${10 + count.index},' \
   #           -u ${var.ssh_username} \
   #           --private-key ${var.ssh_private_key}
   #     EOT
